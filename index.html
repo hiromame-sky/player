@@ -1,0 +1,401 @@
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MP3 Player</title>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*,*::before,*::after{box-shadow:none!important;box-sizing:border-box}
+html,body{height:100%;margin:0;padding:0;background:#fff;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{display:flex;justify-content:center}
+.app{width:100%;max-width:480px;min-height:100dvh;display:flex;flex-direction:column;background:#fff;position:relative}
+header{display:flex;align-items:center;gap:10px;padding:16px;border-bottom:1px solid #e5e5e5;position:sticky;top:0;background:#fff;z-index:10}
+header h1{font-size:18px;font-weight:600;letter-spacing:-0.01em}
+main{flex:1;display:flex;flex-direction:column;padding:16px;padding-bottom:200px}
+#dropzone{border:1px dashed #ccc;border-radius:16px;padding:28px;text-align:center;cursor:pointer;margin-bottom:16px;transition:background .15s,border-color .15s;user-select:none;-webkit-user-select:none}
+#dropzone:active{background:#fafafa}
+#dropzone.dragover{background:#f5f5f5;border-color:#111}
+#dropzone i{width:28px;height:28px;display:block;margin:0 auto 8px;color:#111}
+#dropzone p{font-size:14px;line-height:1.4;color:#666;margin:0}
+#dropzone strong{color:#111;font-weight:600}
+.now-playing{padding:16px 0 14px;border-bottom:1px solid #e5e5e5;margin-bottom:14px}
+.now-title{font-size:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-artist{font-size:14px;color:#666;margin-top:4px;min-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.progress-wrap{padding:6px 0 16px}
+.time-row{display:flex;justify-content:space-between;font-size:12px;color:#666;font-variant-numeric:tabular-nums;margin-bottom:8px}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#e5e5e5;border-radius:9999px;outline:none;margin:0;padding:0}
+input[type="range"]::-webkit-slider-runnable-track{height:4px;background:#e5e5e5;border-radius:9999px}
+input[type="range"]::-moz-range-track{height:4px;background:#e5e5e5;border-radius:9999px}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:9999px;background:#111;border:3px solid #fff;cursor:pointer;margin-top:-9px}
+input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:9999px;background:#111;border:2px solid #fff;cursor:pointer}
+input[type="range"]:focus-visible::-webkit-slider-thumb{outline:2px solid #111;outline-offset:2px}
+.playlist{flex:1;overflow-y:auto;border:1px solid #e5e5e5;border-radius:12px;background:#fff}
+.playlist-empty{padding:40px 20px;text-align:center;color:#999;font-size:14px}
+.track{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #e5e5e5;cursor:pointer;min-height:56px;background:#fff}
+.track:last-child{border-bottom:none}
+.track:active{background:#fafafa}
+.track.active{background:#111;color:#fff}
+.track-num{width:24px;text-align:center;font-size:12px;color:#999;flex-shrink:0;font-variant-numeric:tabular-nums}
+.track.active .track-num{color:#fff}
+.track-info{flex:1;min-width:0}
+.track-name{font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-artist{font-size:12px;color:#999;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track.active .track-artist{color:#bbb}
+.track-duration{font-size:12px;color:#999;font-variant-numeric:tabular-nums;flex-shrink:0}
+.track.active .track-duration{color:#fff}
+.controls{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid #e5e5e5;padding:14px 16px calc(14px + env(safe-area-inset-bottom));z-index:20}
+.controls-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px}
+.btn{width:44px;height:44px;min-width:44px;border:1px solid #e5e5e5;background:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;color:#111;transition:background .12s,border-color .12s}
+.btn:active{background:#f5f5f5}
+.btn.active{background:#111;color:#fff;border-color:#111}
+.btn-play{width:60px;height:60px;background:#111;color:#fff;border-color:#111}
+.btn-play:active{background:#000}
+.btn i{width:20px;height:20px;stroke-width:2}
+.btn-play i{width:26px;height:26px}
+.secondary{display:flex;align-items:center;gap:12px}
+.vol-wrap{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.vol-btn{width:44px;height:44px;min-width:44px;border:1px solid #e5e5e5;border-radius:9999px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#111}
+.vol-btn:active{background:#f5f5f5}
+.vol-btn i{width:20px;height:20px}
+input.vol{flex:1}
+select{font-size:16px;height:44px;padding:0 16px;border:1px solid #ccc;border-radius:9999px;background:#fff;color:#111;min-width:80px}
+select:focus{outline:2px solid #111;outline-offset:2px}
+button:focus-visible,a:focus-visible,#dropzone:focus-visible{outline:2px solid #111;outline-offset:2px}
+@media (hover:hover){
+  .track:hover{background:#fafafa}
+  .track.active:hover{background:#111}
+  .btn:hover{background:#f5f5f5}
+  .btn.active:hover{background:#000}
+  .btn-play:hover{background:#000}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="music" aria-hidden="true" style="width:20px;height:20px;stroke-width:2.5" class="lucide lucide-music"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+    <h1>MP3 Player</h1>
+  </header>
+
+  <main>
+    <div id="dropzone" tabindex="0" role="button" aria-label="Choose audio files">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="upload" aria-hidden="true" class="lucide lucide-upload"><path d="M12 3v12"></path><path d="m17 8-5-5-5 5"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg>
+      <p><strong>Tap to choose files</strong><br>or drag &amp; drop MP3s here</p>
+    </div>
+    <input id="fileInput" type="file" accept="audio/mp3,audio/mpeg,audio/*" multiple="" hidden="">
+
+    <div class="now-playing">
+      <div class="now-title" id="nowTitle">No track selected</div>
+      <div class="now-artist" id="nowArtist"></div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="time-row">
+        <span id="curTime">0:00</span>
+        <span id="totalTime">0:00</span>
+      </div>
+      <input id="progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="Seek">
+    </div>
+
+    <div class="playlist" id="playlist"><div class="playlist-empty">Add MP3 files to start</div></div>
+  </main>
+
+  <footer class="controls">
+    <div class="controls-row">
+      <button class="btn" id="shuffleBtn" aria-label="Shuffle" aria-pressed="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="shuffle" aria-hidden="true" class="lucide lucide-shuffle"><path d="m18 14 4 4-4 4"></path><path d="m18 2 4 4-4 4"></path><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"></path><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2"></path><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45"></path></svg>
+      </button>
+      <button class="btn" id="prevBtn" aria-label="Previous">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="skip-back" aria-hidden="true" class="lucide lucide-skip-back"><path d="M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z"></path><path d="M3 20V4"></path></svg>
+      </button>
+      <button class="btn btn-play" id="playBtn" aria-label="Play">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="play" aria-hidden="true" class="lucide lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg>
+      </button>
+      <button class="btn" id="nextBtn" aria-label="Next">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="skip-forward" aria-hidden="true" class="lucide lucide-skip-forward"><path d="M21 4v16"></path><path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"></path></svg>
+      </button>
+      <button class="btn" id="repeatBtn" aria-label="Repeat" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="repeat" aria-hidden="true" class="lucide lucide-repeat"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg></button>
+    </div>
+    <div class="secondary">
+      <div class="vol-wrap">
+        <button class="vol-btn" id="muteBtn" aria-label="Mute"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="volume-2" aria-hidden="true" class="lucide lucide-volume-2"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path></svg></button>
+        <input id="volSlider" class="vol" type="range" min="0" max="100" value="100" aria-label="Volume">
+      </div>
+      <select id="speedSelect" aria-label="Playback speed">
+        <option value="0.75">0.75x</option>
+        <option value="1" selected="">1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+    </div>
+  </footer>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+
+  const audio = document.getElementById('audio');
+  const fileInput = document.getElementById('fileInput');
+  const dropzone = document.getElementById('dropzone');
+  const playlistEl = document.getElementById('playlist');
+  const nowTitle = document.getElementById('nowTitle');
+  const nowArtist = document.getElementById('nowArtist');
+  const progress = document.getElementById('progress');
+  const curTime = document.getElementById('curTime');
+  const totalTime = document.getElementById('totalTime');
+  const playBtn = document.getElementById('playBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const repeatBtn = document.getElementById('repeatBtn');
+  const volSlider = document.getElementById('volSlider');
+  const muteBtn = document.getElementById('muteBtn');
+  const speedSelect = document.getElementById('speedSelect');
+
+  let tracks = [];
+  let currentIndex = -1;
+  let isShuffle = false;
+  let repeatMode = 0; // 0: off, 1: all, 2: one
+  let lastVolume = 1;
+
+  const formatTime = (t) => {
+    if (!isFinite(t)) return '0:00';
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const escapeHtml = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const renderPlaylist = () => {
+    if (tracks.length === 0) {
+      playlistEl.innerHTML = '<div class="playlist-empty">Add MP3 files to start</div>';
+      return;
+    }
+    playlistEl.innerHTML = '';
+    tracks.forEach((t, i) => {
+      const div = document.createElement('div');
+      div.className = 'track' + (i === currentIndex ? ' active' : '');
+      div.dataset.index = i;
+      div.innerHTML = `
+        <div class="track-num">${i + 1}</div>
+        <div class="track-info">
+          <div class="track-name">${escapeHtml(t.name)}</div>
+          <div class="track-artist">${escapeHtml(t.artist || '')}</div>
+        </div>
+        <div class="track-duration">${t.duration ? formatTime(t.duration) : '--:--'}</div>
+      `;
+      div.addEventListener('click', () => playTrack(i));
+      playlistEl.appendChild(div);
+    });
+    if (window.lucide) lucide.createIcons();
+  };
+
+  const updateNowPlaying = () => {
+    if (currentIndex < 0 || !tracks[currentIndex]) {
+      nowTitle.textContent = 'No track selected';
+      nowArtist.textContent = '';
+      return;
+    }
+    const t = tracks[currentIndex];
+    nowTitle.textContent = t.name;
+    nowArtist.textContent = t.artist ? t.artist : t.file.name;
+  };
+
+  const setPlayIcon = (playing) => {
+    playBtn.innerHTML = `<i data-lucide="${playing ? 'pause' : 'play'}"></i>`;
+    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    if (window.lucide) lucide.createIcons();
+  };
+
+  const playTrack = (index) => {
+    if (index < 0 || index >= tracks.length) return;
+    currentIndex = index;
+    const track = tracks[currentIndex];
+    if (audio.src !== track.url) {
+      audio.src = track.url;
+      audio.load();
+    }
+    audio.playbackRate = parseFloat(speedSelect.value);
+    audio.volume = volSlider.value / 100;
+    audio.play().then(() => setPlayIcon(true)).catch(() => setPlayIcon(false));
+    updateNowPlaying();
+    renderPlaylist();
+  };
+
+  const playPause = () => {
+    if (!tracks.length) return;
+    if (audio.paused) {
+      if (currentIndex === -1) playTrack(0);
+      else audio.play().then(() => setPlayIcon(true));
+    } else {
+      audio.pause();
+      setPlayIcon(false);
+    }
+  };
+
+  const nextTrack = () => {
+    if (!tracks.length) return;
+    if (isShuffle) {
+      let next;
+      do { next = Math.floor(Math.random() * tracks.length); }
+      while (tracks.length > 1 && next === currentIndex);
+      playTrack(next);
+    } else {
+      let next = currentIndex + 1;
+      if (next >= tracks.length) {
+        if (repeatMode === 1) next = 0;
+        else return;
+      }
+      playTrack(next);
+    }
+  };
+
+  const prevTrack = () => {
+    if (!tracks.length) return;
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+      return;
+    }
+    if (isShuffle) {
+      let prev;
+      do { prev = Math.floor(Math.random() * tracks.length); }
+      while (tracks.length > 1 && prev === currentIndex);
+      playTrack(prev);
+    } else {
+      let prev = currentIndex - 1;
+      if (prev < 0) {
+        if (repeatMode === 1) prev = tracks.length - 1;
+        else { audio.currentTime = 0; return; }
+      }
+      playTrack(prev);
+    }
+  };
+
+  const addFiles = (files) => {
+    const newFiles = [...files].filter(f => f.type.startsWith('audio/') || f.name.match(/\.(mp3|m4a|aac|wav|ogg|flac)$/i));
+    if (!newFiles.length) return;
+    
+    newFiles.forEach(file => {
+      const url = URL.createObjectURL(file);
+      const baseName = file.name.replace(/\.[^/.]+$/, '');
+      let artist = '', title = baseName;
+      const parts = baseName.split(' - ');
+      if (parts.length >= 2) { artist = parts[0].trim(); title = parts.slice(1).join(' - ').trim(); }
+      
+      const track = { file, url, name: title, artist, duration: 0 };
+      tracks.push(track);
+      const idx = tracks.length - 1;
+      
+      const temp = new Audio();
+      temp.src = url;
+      temp.addEventListener('loadedmetadata', () => {
+        track.duration = temp.duration;
+        const durEl = playlistEl.querySelector(`.track[data-index="${idx}"] .track-duration`);
+        if (durEl) durEl.textContent = formatTime(track.duration);
+      });
+    });
+    
+    renderPlaylist();
+    if (currentIndex === -1) playTrack(0);
+  };
+
+  const updateRepeatBtn = () => {
+    let icon = 'repeat';
+    if (repeatMode === 2) icon = 'repeat-1';
+    repeatBtn.innerHTML = `<i data-lucide="${icon}"></i>`;
+    repeatBtn.classList.toggle('active', repeatMode > 0);
+    repeatBtn.setAttribute('aria-pressed', repeatMode > 0 ? 'true' : 'false');
+    if (window.lucide) lucide.createIcons();
+  };
+
+  const updateVolIcon = () => {
+    const v = audio.volume;
+    let icon = 'volume-2';
+    if (v === 0) icon = 'volume-x';
+    else if (v < 0.5) icon = 'volume-1';
+    muteBtn.innerHTML = `<i data-lucide="${icon}"></i>`;
+    if (window.lucide) lucide.createIcons();
+  };
+
+  // Events
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }});
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  fileInput.addEventListener('change', e => { if (e.target.files.length) addFiles(e.target.files); e.target.value = ''; });
+
+  playBtn.addEventListener('click', playPause);
+  prevBtn.addEventListener('click', prevTrack);
+  nextBtn.addEventListener('click', nextTrack);
+  
+  shuffleBtn.addEventListener('click', () => {
+    isShuffle = !isShuffle;
+    shuffleBtn.classList.toggle('active', isShuffle);
+    shuffleBtn.setAttribute('aria-pressed', isShuffle ? 'true' : 'false');
+  });
+  
+  repeatBtn.addEventListener('click', () => {
+    repeatMode = (repeatMode + 1) % 3;
+    updateRepeatBtn();
+  });
+
+  audio.addEventListener('play', () => setPlayIcon(true));
+  audio.addEventListener('pause', () => setPlayIcon(false));
+  audio.addEventListener('loadedmetadata', () => {
+    progress.max = audio.duration || 100;
+    totalTime.textContent = formatTime(audio.duration);
+    curTime.textContent = '0:00';
+    progress.value = 0;
+  });
+  audio.addEventListener('timeupdate', () => {
+    if (!isNaN(audio.duration)) {
+      curTime.textContent = formatTime(audio.currentTime);
+      if (document.activeElement !== progress) progress.value = audio.currentTime;
+    }
+  });
+  audio.addEventListener('ended', () => {
+    if (repeatMode === 2) {
+      audio.currentTime = 0;
+      audio.play();
+    } else {
+      nextTrack();
+    }
+  });
+
+  progress.addEventListener('input', () => { audio.currentTime = parseFloat(progress.value); });
+  
+  volSlider.addEventListener('input', () => {
+    const v = volSlider.value / 100;
+    audio.volume = v;
+    lastVolume = v;
+    updateVolIcon();
+  });
+  
+  muteBtn.addEventListener('click', () => {
+    if (audio.volume > 0) {
+      lastVolume = audio.volume;
+      audio.volume = 0;
+      volSlider.value = 0;
+    } else {
+      audio.volume = lastVolume || 0.8;
+      volSlider.value = Math.round(audio.volume * 100);
+    }
+    updateVolIcon();
+  });
+
+  speedSelect.addEventListener('change', () => { audio.playbackRate = parseFloat(speedSelect.value); });
+
+  // Init
+  audio.volume = 1;
+  updateRepeatBtn();
+  updateVolIcon();
+  renderPlaylist();
+});
+</script>
+
+</body></html>
